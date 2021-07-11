@@ -4,6 +4,7 @@ import sqlite3
 import optparse
 import hashlib
 
+# NOTE: This code is not really mine. It is taken from the solution from the manning liveproject
 
 def run(db_file, folder):
     '''Run the program'''
@@ -203,10 +204,78 @@ def md5_short(fname):
     return md5
 
 
-if __name__ == "__main__":
-    parser = optparse.OptionParser()
-    parser.add_option("-d", "--database", dest="db_file", default="./files.db")
-    parser.add_option("-f", "--folder", dest="folder")
-    (options, args) = parser.parse_args()
+def load_fields(config):
+    flds = []
+    ext = []
+    if os.path.isfile(config):
+        cfile = open(config, 'r')
+        # Parse each config file line and get the folder and extensions
+        for line in cfile:
+            folder, exts = line.split("|")
+            if len(exts) > 0:
+                for ex in exts.split(","):
+                    ext.append(ex)
+            if len(folder) > 0:
+                flds.append(folder)
 
-    run(options.db_file, options.folder)
+    return flds, ext
+
+
+def checkfilechanges(folder, exclude, ws):
+    changed = False
+    """Checks for files changes"""
+    for subdir, dirs, files in os.walk(folder):
+        for fname in files:
+            origin = os.path.join(subdir, fname)
+            if os.path.isfile(origin):
+                fext = get_fileext(origin)
+                if not fext in exclude:
+                    md5 = md5_short(origin)
+                    if has_changed(origin, md5):
+                        changed = True
+    return changed
+
+
+def runfilechanges(ws):
+    changed = False
+    fldexts = load_fields()
+    for i, fld in enumerate(fldexts[0]):
+        exts = fldexts[1]
+        changed = checkfilechanges(fld, exts[i], ws)
+    return changed
+
+
+def startxlsreport():
+    pass
+
+
+def endxlsreport(wb, st):
+    pass
+
+
+def execute(args):
+    chn = 0
+    if len(args) > 1:
+        if args[1].lower() == '--loop':
+            # To be done in the last milestone
+            wb, ws, st = startxlsreport()
+            try:
+                while True:
+                    changed = runfilechanges(ws)
+                    if changed:
+                        chn += 1
+            except KeyboardInterrupt:
+                print('Stopped...')
+                if chn > 0:
+                    # To be done in the last milestone
+                    endxlsreport(wb, st)
+    else:
+        # To be done in the last milestone
+        wb, ws, st = startxlsreport()
+        changed = runfilechanges(ws)
+        if changed:
+            # To be done in the last milestone
+            endxlsreport(wb, st)
+
+if __name__ == '__main__':
+    execute(sys.argv)
